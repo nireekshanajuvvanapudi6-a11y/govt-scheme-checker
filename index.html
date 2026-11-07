@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Govt Scheme Checker</title>
+    <style>
+        :root {
+            --primary: #0b3d91; --accent: #138808; --saffron: #FF9933;
+            --bg: #f4f6f9; --chat-bg: #ffffff; --text: #333333;
+            --green-bg: #e6f4ea; --green-text: #137333;
+            --red-bg: #fce8e6; --red-text: #c5221f;
+            --blue-bg: #e8f0fe; --blue-text: #1a73e8;
+            --orange-bg: #fff3e0; --orange-text: #e65100;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Arial, sans-serif;}
+        
+        body {
+            background: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2000&auto=format&fit=crop') no-repeat center center fixed;
+            background-size: cover; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden;
+        }
+        
+        .app-container {
+            width: 100%; max-width: 480px; height: 100vh; background: var(--chat-bg);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3); display: flex;
+            flex-direction: column; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.5);
+        }
+        @media (min-width: 768px) { .app-container { height: 90vh; border-radius: 20px; } }
+
+        header {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            color: var(--primary); padding: 15px; display: flex; justify-content: space-between; align-items: center;
+            font-weight: 900; font-size: 19px; z-index: 10; border-bottom: 2px solid var(--saffron);
+        }
+        
+        .screen { display: none; flex-direction: column; flex: 1; padding: 20px; overflow-y: auto; padding-bottom: 80px; background: rgba(255,255,255,0.92); }
+        .screen.active { display: flex; }
+
+        .bottom-nav {
+            position: absolute; bottom: 0; width: 100%; background: white;
+            display: flex; justify-content: space-around; padding: 12px 0;
+            border-top: 1px solid #ddd; z-index: 10; box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #666; cursor: pointer; border: none; background: none; transition: all 0.3s; }
+        .nav-item.active { color: var(--primary); font-weight: bold; transform: translateY(-3px); }
+        .nav-icon { font-size: 22px; margin-bottom: 4px; }
+
+        .input-group { margin-bottom: 15px; }
+        input { width: 100%; padding: 14px; border: 2px solid #ccc; border-radius: 10px; font-size: 16px; transition: 0.3s;}
+        input:focus { border-color: var(--primary); outline: none; }
+        .main-btn { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.3s;}
+        .main-btn:hover { background: #082e6e; }
+        .hidden { display: none !important; }
+        
+        .login-tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .login-tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-weight: bold; color: #777; border-bottom: 3px solid transparent; transition: 0.3s;}
+        .login-tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+
+        .otp-alert { background: #e6f4ea; border: 2px dashed #137333; color: #137333; padding: 15px; border-radius: 10px; font-size: 14px; text-align: center; margin-bottom: 15px; display: none; font-weight: bold; }
+        .timer-text { font-weight: bold; color: #c5221f; font-size: 14px; text-align: right; margin-top: 5px; }
+        
+        .lang-select { width: 100%; padding: 15px; font-size: 16px; border-radius: 10px; border: 2px solid var(--primary); background: white; color: var(--primary); font-weight: bold; margin-bottom: 20px; cursor: pointer; }
+
+        .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px; }
+        .category-card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 15px 5px; text-align: center; font-size: 12px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s; font-weight: bold; color: #444; }
+        .category-card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); border-color: var(--saffron);}
+        .category-card .icon { font-size: 28px; margin-bottom: 8px; }
+
+        .chat-box { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-bottom: 10px;}
+        .message-container { display: flex; width: 100%; align-items: flex-start; gap: 10px;}
+        .message-container.user { justify-content: flex-end; }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 18px; flex-shrink: 0; }
+        .avatar.ai { background: var(--accent); color: white; box-shadow: 0 2px 5px rgba(19, 136, 8, 0.3);}
+        .avatar.user { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(11, 61, 145, 0.3);}
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 15px; line-height: 1.6; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+        .message.user { background: var(--primary); color: white; border-top-right-radius: 2px; }
+        .message.ai { background: #fff; color: var(--text); border-top-left-radius: 2px; border: 1px solid #e5e5e5;}
+        
+        .input-area { position: absolute; bottom: 65px; left: 0; right: 0; background: white; padding: 10px 15px; display: flex; gap: 8px; border-top: 1px solid #eee; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.02);}
+        .input-area input { flex: 1; border-radius: 25px; margin: 0; background: #f4f6f9; border: 1px solid #ddd; padding: 12px 15px;}
+        .icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; padding: 8px; border-radius: 50%; transition: 0.3s; display: flex; justify-content: center; align-items: center;}
+        .icon-btn:hover { background: #eee; color: var(--primary);}
+        .send-btn { color: white; background: var(--accent); width: 42px; height: 42px; border-radius: 50%; font-size: 20px; } 
+        .send-btn:hover { background: #0f6b06; }
+        
+        .mic-btn { width: 42px; height: 42px; padding: 0; border-radius: 50%; background: white; border: 1px solid #ddd; display: flex; justify-content: center; align-items: center; flex-shrink: 0; transition: 0.3s; }
+        .mic-btn img { width: 24px; height: 24px; object-fit: contain; }
+        .mic-btn.recording { background: #ffe6e6; border-color: red; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4); } 70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); } }
+
+        .scheme-card { border: 1px solid #ddd; padding: 15px; border-radius: 12px; margin-bottom: 12px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--accent);}
+        .source-tag { font-size: 11px; color: var(--primary); background: var(--blue-bg); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold;}
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin: 5px 5px 5px 0; }
+        .status-green { background: var(--green-bg); color: var(--green-text); }
+        .status-red { background: var(--red-bg); color: var(--red-text); }
+        .deadline-red { background: var(--red-bg); color: var(--red-text); }
+        .deadline-orange { background: var(--orange-bg); color: var(--orange-text); }
+        .deadline-blue { background: var(--blue-bg); color: var(--blue-text); }
+        .doc-list { font-size: 13px; color: #555; margin: 10px 0; padding-left: 20px; }
+        
+        .action-btns { display: flex; gap: 10px; margin-top: 12px; }
+        .btn-apply { background: var(--accent); color: white; padding: 10px; font-size: 14px; border-radius: 8px; border: none; flex: 1; cursor: pointer; font-weight: bold; transition: 0.3s;}
+        .btn-apply:hover { background: #0f6b06; }
+        .btn-share { background: #25D366; color: white; padding: 10px; font-size: 14px; border-radius: 8px; border: none; flex: 1; cursor: pointer; font-weight: bold; transition: 0.3s;}
+        .btn-share:hover { background: #1eb958; }
+        .btn-remind { background: #ff9800; color: white; padding: 10px; font-size: 14px; border-radius: 8px; border: none; width: 100%; margin-top: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 5px;}
+        .btn-remind:hover { background: #e68a00; }
+
+        .profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);}
+        .profile-pic-container { position: relative; width: 110px; height: 110px; margin-bottom: 10px; }
+        .profile-pic { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid var(--saffron); background: #eee; }
+        .edit-pic-btn { position: absolute; bottom: 0; right: 0; background: var(--primary); color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 2px solid white; font-size: 14px; }
+        .profile-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
+        .profile-row:last-child { border-bottom: none; }
+        .profile-label { font-size: 14px; color: #666; font-weight: bold;}
+        .profile-value { font-size: 15px; font-weight: bold; color: var(--primary); }
+        .edit-input { display: none; width: 60%; padding: 8px; border: 2px solid var(--primary); border-radius: 6px; font-size: 14px; }
+        .edit-btn-main { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 12px; }
+        .logout-btn { background: white; color: var(--red-text); border: 2px solid var(--red-text); padding: 14px; border-radius: 10px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; }
+        
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 18px; height: 18px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <span>🇮🇳 Govt Scheme Checker</span>
+        <span>🔔</span>
+    </header>
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="loginScreen" class="screen active">
+        <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">Welcome</h2>
+        
+        <div class="login-tabs">
+            <div class="login-tab" id="tabPhone" onclick="switchLoginTab('phone')">Phone Number</div>
+            <div class="login-tab active" id="tabEmail" onclick="switchLoginTab('email')">Email</div>
+        </div>
+
+        <div id="inputSection">
+            <div class="input-group">
+                <input type="text" id="userContact" placeholder="Enter Email Address">
+            </div>
+            <button class="main-btn" onclick="sendOTP()">Generate OTP</button>
+        </div>
+
+        <div id="otpSection" class="hidden">
+            <div class="otp-alert" id="otpAlert">✅ OTP sent!</div>
+            <div class="input-group">
+                <input type="text" id="otpInput" placeholder="Enter 6-digit OTP" maxlength="6">
+                <div class="timer-text" id="timerText"></div>
+            </div>
+            <button class="main-btn" onclick="verifyOTP()">Verify & Login</button>
+        </div>
+    </div>
+
+    <!-- 2. LANGUAGE SCREEN -->
+    <div id="languageScreen" class="screen">
+        <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">Select Language</h2>
+        <select id="languageDropdown" class="lang-select">
+            <option value="te-IN">తెలుగు (Telugu)</option>
+            <option value="en-IN">English</option>
+            <option value="hi-IN">हिन्दी (Hindi)</option>
+            <option value="ta-IN">தமிழ் (Tamil)</option>
+            <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+            <option value="ml-IN">മലയാളം (Malayalam)</option>
+            <option value="mr-IN">मराठी (Marathi)</option>
+            <option value="bn-IN">বাংলা (Bengali)</option>
+        </select>
+        <button class="main-btn" onclick="selectLanguage()">Continue</button>
+    </div>
+
+    <!-- 3. HOME SCREEN -->
+    <div id="homeScreen" class="screen">
+        <h3 style="color: var(--primary);">Categories</h3>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">All Official Government Schemes</p>
+        <div class="category-grid">
+            <div class="category-card" onclick="fetchSchemes('Agriculture')"><div class="icon">🌾</div>Agriculture</div>
+            <div class="category-card" onclick="fetchSchemes('Education')"><div class="icon">🎓</div>Education</div>
+            <div class="category-card" onclick="fetchSchemes('Health')"><div class="icon">🏥</div>Health</div>
+            <div class="category-card" onclick="fetchSchemes('Women')"><div class="icon">👩</div>Women</div>
+            <div class="category-card" onclick="fetchSchemes('Housing')"><div class="icon">🏠</div>Housing</div>
+            <div class="category-card" onclick="fetchSchemes('Employment')"><div class="icon">💼</div>Jobs</div>
+        </div>
+    </div>
+
+    <!-- 4. AI CHAT SCREEN -->
+    <div id="chatScreen" class="screen">
+        <div class="chat-box" id="chatBox">
+            <div class="message-container">
+                <div class="avatar ai">🤖</div>
+                <div class="message ai">Namaste! I am your Agentic AI Assistant. Type or speak your details (Age, Income, Job) to check eligibility.</div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <button class="icon-btn mic-btn" id="micBtn" onclick="startVoiceInput()" title="Speak">
+                <img src="https://cdn-icons-png.flaticon.com/512/709/709682.png" alt="Mic" style="filter: invert(48%) sepia(89%) saturate(2529%) hue-rotate(202deg) brightness(95%) contrast(92%);">
+            </button>
+            <input type="text" id="userInput" placeholder="Message AI Assistant..." onkeypress="handleKeyPress(event)">
+            <button class="icon-btn send-btn" onclick="sendMessage()" title="Send">➤</button> 
+        </div>
+    </div>
+
+    <!-- 5. HISTORY SCREEN -->
+    <div id="historyScreen" class="screen">
+        <h3 style="color: var(--primary); margin-bottom: 15px;">Application History & Status</h3>
+        <div id="historyList">
+            <p style="color: #666; font-size: 14px; text-align: center; margin-top: 20px;">No schemes applied yet.</p>
+        </div>
+    </div>
+
+    <!-- 6. PROFILE SCREEN -->
+    <div id="profileScreen" class="screen">
+        <div class="profile-header">
+            <div class="profile-pic-container">
+                <img id="profileImage" class="profile-pic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Profile">
+                <div class="edit-pic-btn" onclick="document.getElementById('fileInput').click()">✎</div>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="changeProfilePic(event)">
+            </div>
+            <h3 id="displayName" style="color: var(--text); margin-bottom: 5px;">User Name</h3>
+            <p id="displayContact" style="font-size: 14px; color: #666;">-</p>
+        </div>
+
+        <div class="profile-card">
+            <div class="profile-row">
+                <span class="profile-label">Age</span>
+                <span class="profile-value" id="valAge">Not Provided</span>
+                <input type="text" class="edit-input" id="inputAge" value="">
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Annual Income</span>
+                <span class="profile-value" id="valIncome">Not Provided</span>
+                <input type="text" class="edit-input" id="inputIncome" value="">
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Occupation</span>
+                <span class="profile-value" id="valJob">Not Provided</span>
+                <input type="text" class="edit-input" id="inputJob" value="">
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Language</span>
+                <span class="profile-value" id="valLang">-</span>
+            </div>
+        </div>
+
+        <button class="edit-btn-main" id="editBtn" onclick="toggleEditProfile()">✎ Edit Profile</button>
+        <button class="logout-btn" onclick="logoutUser()">Logout</button>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav hidden" id="bottomNav">
+        <button class="nav-item active" onclick="switchTab('homeScreen', this)"><span class="nav-icon">🏠</span>Home</button>
+        <button class="nav-item" onclick="switchTab('chatScreen', this)"><span class="nav-icon">💬</span>Support</button>
+        <button class="nav-item" onclick="switchTab('historyScreen', this)"><span class="nav-icon">📜</span>History</button>
+        <button class="nav-item" onclick="switchTab('profileScreen', this)"><span class="nav-icon">👤</span>Profile</button>
+    </div>
+</div>
+
+<script>
+    let currentVoiceLang = 'en-IN';
+    let userProfile = { contact: "", age: null, income: null, job: null };
+    let appliedSchemes = [];
+    let loginMode = 'email';
+    let otpTimerInterval;
+    let isEditingProfile = false;
+
+    // --- LOGIN & OTP LOGIC ---
+    function switchLoginTab(mode) {
+        loginMode = mode;
+        const inputField = document.getElementById('userContact');
+        if (mode === 'phone') {
+            document.getElementById('tabPhone').classList.add('active');
+            document.getElementById('tabEmail').classList.remove('active');
+            inputField.placeholder = "Phone OTP not available. Use Email.";
+            inputField.type = "tel"; inputField.value = "";
+        } else {
+            document.getElementById('tabEmail').classList.add('active');
+            document.getElementById('tabPhone').classList.remove('active');
+            inputField.placeholder = "Enter Email Address";
+            inputField.type = "email"; inputField.value = "";
+        }
+        document.getElementById('inputSection').classList.remove('hidden');
+        document.getElementById('otpSection').classList.add('hidden');
+    }
+
+    async function sendOTP() {
+        const contact = document.getElementById('userContact').value.trim();
+        
+        if (loginMode === 'phone') {
+            alert("❌ Real OTP is only for Email right now. Please select Email tab.");
+            return;
+        }
+
+        if (!contact.includes('@')) { 
+            alert("❌ Please enter a valid Email Address."); 
+            return; 
+        }
+
+        userProfile.contact = contact;
+        document.getElementById('otpAlert').style.display = 'none'; 
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/v1/generate-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: contact })
+            });
+            
+            const data = await response.json();
+            
+            if(data.status === "success") {
+                document.getElementById('inputSection').classList.add('hidden');
+                document.getElementById('otpSection').classList.remove('hidden');
+                
+                const otpAlert = document.getElementById('otpAlert');
+                otpAlert.style.display = 'block';
+                otpAlert.innerHTML = `📧 OTP sent to your Email: <b>${contact}</b><br>Please check your inbox.`;
+                
+                startOTPTimer(300); // 5 Minutes
+            } else {
+                alert("❌ Failed to send OTP.");
+            }
+        } catch (error) {
+            alert("❌ Backend Server Offline! Run 'uvicorn main:app --reload'.");
+        }
+    }
+
+    function startOTPTimer(seconds) {
+        clearInterval(otpTimerInterval);
+        const timerText = document.getElementById('timerText');
+        let timeLeft = seconds;
+        timerText.innerText = `OTP expires in: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+        timerText.style.color = "#c5221f";
+        
+        otpTimerInterval = setInterval(() => {
+            timeLeft--;
+            timerText.innerText = `OTP expires in: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+            if (timeLeft <= 0) {
+                clearInterval(otpTimerInterval);
+                timerText.innerText = "❌ OTP Expired!";
+                document.getElementById('otpInput').value = "";
+            }
+        }, 1000);
+    }
+
+    async function verifyOTP() {
+        if(document.getElementById('timerText').innerText.includes("Expired")) { 
+            alert("OTP has expired. Please reload."); 
+            return; 
+        }
+        
+        const enteredOTP = document.getElementById('otpInput').value;
+        
+        if(enteredOTP.length !== 6) {
+            alert("Please enter 6-digit OTP.");
+            return;
+        }
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/v1/verify-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: userProfile.contact, otp: enteredOTP })
+            });
+            
+            const data = await response.json();
+            
+            if(data.status === "success") {
+                clearInterval(otpTimerInterval);
+                document.getElementById('loginScreen').classList.remove('active');
+                document.getElementById('languageScreen').classList.add('active');
+            } else {
+                alert("❌ " + data.detail);
+            }
+        } catch (error) {
+            alert("❌ Invalid OTP or Server Error.");
+        }
+    }
+
+    // --- LANGUAGE & NAVIGATION ---
+    function selectLanguage() {
+        const dropdown = document.getElementById('languageDropdown');
+        currentVoiceLang = dropdown.value;
+        const langName = dropdown.options[dropdown.selectedIndex].text;
+        
+        document.getElementById('valLang').innerText = langName;
+        document.getElementById('displayContact').innerText = userProfile.contact;
+        
+        document.getElementById('languageScreen').classList.remove('active');
+        document.getElementById('homeScreen').classList.add('active');
+        document.getElementById('bottomNav').classList.remove('hidden');
+    }
+
+    function switchTab(screenId, btnElement) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+    }
+
+    // --- PROFILE EDIT LOGIC ---
+    function changeProfilePic(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('profileImage').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function toggleEditProfile() {
+        isEditingProfile = !isEditingProfile;
+        
+        const btn = document.getElementById('editBtn');
+        const valAge = document.getElementById('valAge');
+        const valIncome = document.getElementById('valIncome');
+        const valJob = document.getElementById('valJob');
+        
+        const inputAge = document.getElementById('inputAge');
+        const inputIncome = document.getElementById('inputIncome');
+        const inputJob = document.getElementById('inputJob');
+
+        if (isEditingProfile) {
+            btn.innerText = "💾 Save Profile";
+            btn.style.background = "var(--accent)";
+            
+            inputAge.value = valAge.innerText === "Not Provided" ? "" : valAge.innerText;
+            inputIncome.value = valIncome.innerText === "Not Provided" ? "" : valIncome.innerText.replace('₹', '');
+            inputJob.value = valJob.innerText === "Not Provided" ? "" : valJob.innerText;
+
+            valAge.style.display = 'none'; inputAge.style.display = 'block';
+            valIncome.style.display = 'none'; inputIncome.style.display = 'block';
+            valJob.style.display = 'none'; inputJob.style.display = 'block';
+        } else {
+            btn.innerText = "✎ Edit Profile";
+            btn.style.background = "var(--primary)";
+
+            let newAge = inputAge.value.trim() || "Not Provided";
+            let newIncome = inputIncome.value.trim() || "Not Provided";
+            let newJob = inputJob.value.trim() || "Not Provided";
+
+            valAge.innerText = newAge;
+            valIncome.innerText = newIncome ? (newIncome.includes('₹') ? newIncome : '₹' + newIncome) : "Not Provided";
+            valJob.innerText = newJob;
+
+            userProfile.age = newAge !== "Not Provided" ? parseInt(newAge) : null;
+            userProfile.income = newIncome !== "Not Provided" ? parseInt(newIncome.replace('₹','')) : null;
+            userProfile.job = newJob;
+
+            valAge.style.display = 'block'; inputAge.style.display = 'none';
+            valIncome.style.display = 'block'; inputIncome.style.display = 'none';
+            valJob.style.display = 'block'; inputJob.style.display = 'none';
+
+            alert("✅ Profile Updated Successfully!");
+        }
+    }
+
+    function logoutUser() {
+        if(confirm("Are you sure you want to logout?")) {
+            location.reload(); 
+        }
+    }
+
+    // --- VOICE INPUT ---
+    function startVoiceInput() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) { alert("Use Google Chrome for Voice Input."); return; }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = currentVoiceLang;
+        
+        const micBtn = document.getElementById('micBtn');
+        micBtn.classList.add('recording');
+        recognition.start();
+
+        recognition.onresult = (event) => {
+            const speechResult = event.results[0][0].transcript;
+            document.getElementById('userInput').value = speechResult;
+            micBtn.classList.remove('recording');
+            setTimeout(() => sendMessage(), 800); 
+        };
+
+        recognition.onspeechend = () => { recognition.stop(); micBtn.classList.remove('recording'); };
+        recognition.onerror = (event) => { alert("Voice Error: " + event.error); micBtn.classList.remove('recording'); };
+    }
+
+    // --- CHAT LOGIC ---
+    function handleKeyPress(e) { if (e.key === 'Enter') sendMessage(); }
+
+    function sendMessage() {
+        const inputField = document.getElementById('userInput');
+        const text = inputField.value.trim();
+        if (!text) return;
+        
+        addMessage(text, 'user');
+        inputField.value = '';
+        processAIResponse(text);
+    }
+
+    function addMessage(text, sender, isHTML = false) {
+        const chatBox = document.getElementById('chatBox');
+        
+        const container = document.createElement('div');
+        container.className = `message-container ${sender}`;
+        
+        const avatar = document.createElement('div');
+        avatar.className = `avatar ${sender}`;
+        avatar.innerText = sender === 'user' ? '👤' : '🤖';
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${sender}`;
+        
+        if(isHTML) { msgDiv.innerHTML = text; } else { msgDiv.innerText = text; }
+        
+        if (sender === 'user') {
+            container.appendChild(msgDiv);
+            container.appendChild(avatar);
+        } else {
+            container.appendChild(avatar);
+            container.appendChild(msgDiv);
+        }
+        
+        chatBox.appendChild(container);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function processAIResponse(userText) {
+        const text = userText.toLowerCase();
+        
+        let ageMatch = text.match(/\b(\d{2})\b/);
+        let incomeMatch = text.match(/\b(\d{5,6})\b/);
+        
+        if(ageMatch) { userProfile.age = parseInt(ageMatch[0]); document.getElementById('valAge').innerText = userProfile.age; }
+        if(incomeMatch) { userProfile.income = parseInt(incomeMatch[0]); document.getElementById('valIncome').innerText = "₹" + userProfile.income; }
+
+        addMessage(`<div class="spinner"></div> Agentic AI is analyzing government schemes...`, 'ai', true);
+        
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/v1/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    query: userText,
+                    age: userProfile.age || 30,
+                    income: userProfile.income || 100000,
+                    language: currentVoiceLang
+                })
+            });
+
+            const data = await response.json();
+            
+            const chatBox = document.getElementById('chatBox');
+            if(chatBox.lastChild) chatBox.removeChild(chatBox.lastChild);
+
+            if(data.status === "success") {
+                let aiResponse = JSON.parse(data.agent_response);
+                let resultHTML = "";
+                aiResponse.forEach(scheme => {
+                    resultHTML += generateSchemeCard(
+                        { name: scheme.name, desc: scheme.reason, docs: ['Aadhaar', 'Income Certificate'], source: 'AI Agent', daysLeft: 15, applyLink: scheme.link },
+                        scheme.match, "AI Verified"
+                    );
+                });
+                addMessage(resultHTML, 'ai', true);
+            } else {
+                addMessage("❌ AI Error: Backend returned an error.", 'ai');
+            }
+
+        } catch (error) {
+            const chatBox = document.getElementById('chatBox');
+            if(chatBox.lastChild) chatBox.removeChild(chatBox.lastChild);
+            
+            addMessage(`⚠️ <b>Backend Server Offline!</b> Showing Demo Results.`, 'ai', true);
+            
+            let isFarmer = text.includes('raitu') || text.includes('farmer') || text.includes('రైతు');
+            let resultHTML = "";
+            let allSchemes = getMultiSourceData();
+            
+            if (isFarmer) {
+                let farmerSchemes = allSchemes.filter(s => s.category === 'Agriculture');
+                farmerSchemes.forEach(scheme => { resultHTML += generateSchemeCard(scheme, 95, "Highly Eligible"); });
+            } else {
+                resultHTML += generateSchemeCard(allSchemes.find(s => s.name === 'Ayushman Bharat'), 80, "Eligible");
+            }
+            addMessage(resultHTML, 'ai', true);
+        }
+    }
+
+    // --- FETCH SCHEMES (Categories) ---
+    function fetchSchemes(category) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('chatScreen').classList.add('active');
+        addMessage(`Fetching schemes for ${category} from official portals...`, 'ai');
+        
+        setTimeout(() => {
+            const sourceData = getMultiSourceData();
+            let filteredSchemes = sourceData.filter(s => s.category === category);
+            if(filteredSchemes.length === 0) { addMessage(`No schemes found for ${category}.`, 'ai'); return; }
+
+            let html = `<b>Found ${filteredSchemes.length} schemes for ${category}:</b><br>`;
+            filteredSchemes.forEach(scheme => { html += generateSchemeCard(scheme, 100, "Eligible"); });
+            addMessage(html, 'ai', true);
+        }, 1000);
+    }
+
+    // --- DATA ---
+    function getMultiSourceData() {
+        return [
+            { name: 'PM-Kisan', desc: 'Financial support to farmers.', docs: ['Aadhaar', 'Land Records', 'Bank Passbook'], category: 'Agriculture', source: 'myScheme.gov.in', daysLeft: 45, applyLink: 'https://pmkisan.gov.in' },
+            { name: 'Ayushman Bharat', desc: 'Health insurance up to 5 Lakhs.', docs: ['Aadhaar', 'Ration Card'], category: 'Health', source: 'myScheme.gov.in', daysLeft: 12, applyLink: 'https://pmjay.gov.in' },
+            { name: 'Post-Matric Scholarship', desc: 'Scholarship for students.', docs: ['Aadhaar', 'Income Certificate', 'Marksheet'], category: 'Education', source: 'scholarships.gov.in', daysLeft: 25, applyLink: 'https://scholarships.gov.in' },
+            { name: 'Rythu Bharosa', desc: 'Farmer investment support.', docs: ['Aadhaar', 'Pattadar Passbook'], category: 'Agriculture', source: 'gov.in', daysLeft: 5, applyLink: 'https://ysrrythubharosa.ap.gov.in' },
+            { name: 'Rythu Bandhu', desc: 'Farmer investment support.', docs: ['Aadhaar', 'Pattadar Passbook'], category: 'Agriculture', source: 'gov.in', daysLeft: 60, applyLink: 'https://rythubandhu.telangana.gov.in' },
+            { name: 'Amma Vodi', desc: 'Scheme for mothers.', docs: ['Aadhaar', 'Ration Card', 'School Certificate'], category: 'Women', source: 'gov.in', daysLeft: 18, applyLink: 'https://jaganannaammavodi.ap.gov.in' },
+            { name: 'Kalyana Lakshmi', desc: 'Scheme for women marriage.', docs: ['Aadhaar', 'Marriage Certificate'], category: 'Women', source: 'gov.in', daysLeft: 90, applyLink: 'https://telanganaepass.cgg.gov.in' },
+            { name: 'PM Awas Yojana', desc: 'Housing for all.', docs: ['Aadhaar', 'Income Certificate'], category: 'Housing', source: 'india.gov.in', daysLeft: 8, applyLink: 'https://pmaymis.gov.in' },
+            { name: 'MGNREGA', desc: 'Guaranteed wage employment.', docs: ['Job Card', 'Aadhaar'], category: 'Employment', source: 'nrega.nic.in', daysLeft: 40, applyLink: 'https://nrega.nic.in' }
+        ];
+    }
+
+    // --- GENERATE CARD ---
+    function generateSchemeCard(scheme, percentage, statusText) {
+        if(!scheme) return "";
+        let statusColorClass = percentage >= 80 ? "status-green" : "status-yellow";
+        
+        let deadlineClass = "";
+        let daysText = "";
+        if(scheme.daysLeft < 15) { deadlineClass = "deadline-red"; daysText = `Only ${scheme.daysLeft} Days Left`; } 
+        else if(scheme.daysLeft >= 15 && scheme.daysLeft <= 30) { deadlineClass = "deadline-orange"; daysText = `${scheme.daysLeft} Days Left`; } 
+        else { deadlineClass = "deadline-blue"; daysText = `${scheme.daysLeft} Days Left`; }
+
+        let docsHtml = `<ul class="doc-list">`;
+        scheme.docs.forEach(doc => { docsHtml += `<li>${doc}</li>`; });
+        docsHtml += `</ul>`;
+
+        return `
+            <div class="scheme-card">
+                <span class="source-tag">🏛️ Source: ${scheme.source}</span>
+                <h4 style="color:var(--primary); margin-bottom:5px;">${scheme.name}</h4>
+                <p style="font-size:13px; color:#666; margin-bottom:8px;">${scheme.desc}</p>
+                <div style="margin: 8px 0;">
+                    <span class="status-badge ${statusColorClass}">✓ ${percentage}% Match</span>
+                    <span class="status-badge ${deadlineClass}">⏳ ${daysText}</span>
+                </div>
+                <div style="background:#f8f9fa; padding:10px; border-radius:8px; margin-top:10px;">
+                    <b style="font-size:13px; color:#333;">📄 Required Documents:</b>
+                    ${docsHtml}
+                </div>
+                
+                <button class="btn-remind" onclick="sendRealEmailReminder('${scheme.name}', ${scheme.daysLeft}, '${scheme.applyLink}')">
+                    🔔 Remind Me on Email
+                </button>
+
+                <div class="action-btns">
+                    <button class="btn-apply" onclick="applyScheme('${scheme.name}', '${scheme.source}', '${scheme.applyLink}')">Apply Now</button>
+                    <button class="btn-share" onclick="shareScheme('${scheme.name}', '${scheme.source}', '${daysText}')">📤 Share</button>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- REAL EMAIL REMINDER ---
+    async function sendRealEmailReminder(schemeName, daysLeft, applyLink) {
+        let userEmail = userProfile.contact; 
+        
+        if (!userEmail.includes('@')) {
+            userEmail = prompt("Please enter your Email ID to receive the reminder:");
+            if (!userEmail || !userEmail.includes('@')) {
+                alert("❌ Invalid Email. Reminder not set.");
+                return;
+            }
+            userProfile.contact = userEmail;
+            document.getElementById('displayContact').innerText = userEmail;
+        }
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/v1/send-reminder", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: userEmail,
+                    scheme_name: schemeName,
+                    days_left: daysLeft,
+                    apply_link: applyLink
+                })
+            });
+            const data = await response.json();
+            
+            if(data.status === "success") {
+                alert(`✅ Success! A real email has been sent to ${userEmail}. Please check your inbox.`);
+            } else {
+                alert("❌ Failed to send email. Check backend terminal.");
+            }
+        } catch (error) {
+            alert("❌ Backend Server Offline! Please run 'uvicorn main:app --reload'.");
+        }
+    }
+
+    // --- SHARE LOGIC ---
+    function shareScheme(name, source, deadline) {
+        const shareText = `*Govt Scheme Alert!*\n\n*Scheme:* ${name}\n*Source:* ${source}\n*Deadline:* ${deadline}\n\nCheck your eligibility now on Govt Scheme Checker!`;
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        window.open(whatsappUrl, '_blank');
+    }
+
+    // --- APPLY LOGIC ---
+    function applyScheme(schemeName, source, applyLink) {
+        if(appliedSchemes.some(s => s.name === schemeName)) {
+            alert(`You have already applied for ${schemeName}. Check History tab.`);
+            return;
+        }
+
+        window.open(applyLink, '_blank');
+        
+        appliedSchemes.push({ 
+            name: schemeName, date: new Date().toLocaleDateString(), source: source,
+            status: 'verifying', rejectReason: ''
+        });
+        
+        updateHistoryUI();
+        addMessage(`You clicked Apply for <b>${schemeName}</b>. Verifying your documents in background...`, 'ai', true);
+        
+        setTimeout(() => {
+            let index = appliedSchemes.findIndex(s => s.name === schemeName);
+            if(index !== -1) {
+                let isApproved = Math.random() > 0.3; 
+                if (isApproved) {
+                    appliedSchemes[index].status = 'approved';
+                    addMessage(`✅ Your application for <b>${schemeName}</b> is approved! You are eligible.`, 'ai', true);
+                } else {
+                    appliedSchemes[index].status = 'rejected';
+                    let reasons = ["Missing mandatory document: Income Certificate", "Missing mandatory document: Land Records", "Invalid Details provided", "Application Deadline Expired"];
+                    appliedSchemes[index].rejectReason = reasons[Math.floor(Math.random() * reasons.length)];
+                    addMessage(`❌ Your application for <b>${schemeName}</b> was rejected.<br><b>Reason:</b> ${appliedSchemes[index].rejectReason}`, 'ai', true);
+                }
+                updateHistoryUI();
+            }
+        }, 2000);
+    }
+
+    // --- UPDATE HISTORY UI ---
+    function updateHistoryUI() {
+        const list = document.getElementById('historyList');
+        if(appliedSchemes.length === 0) {
+            list.innerHTML = `<p style="color: #666; font-size: 14px;">No schemes applied yet.</p>`;
+            return;
+        }
+        
+        let html = "";
+        appliedSchemes.forEach(app => {
+            let statusHtml = "";
+            let borderColor = "";
+            
+            if (app.status === 'verifying') {
+                statusHtml = `<div class="status-badge deadline-orange"><span class="spinner"></span> Verifying Documents...</div>`;
+                borderColor = "var(--saffron)";
+            } else if (app.status === 'approved') {
+                statusHtml = `<div class="status-badge status-green">✅ Approved (Eligible)</div>`;
+                borderColor = "var(--accent)";
+            } else if (app.status === 'rejected') {
+                statusHtml = `<div class="status-badge status-red">❌ Rejected</div><p style="font-size: 12px; color: #c5221f; margin-top: 5px;"><b>Reason:</b> ${app.rejectReason}</p>`;
+                borderColor = "var(--red-text)";
+            }
+
+            html += `
+                <div class="scheme-card" style="border-left: 5px solid ${borderColor};">
+                    <span class="source-tag">🏛️ Source: ${app.source}</span>
+                    <h4 style="color:var(--primary); margin-bottom:5px;">${app.name}</h4>
+                    <p style="font-size:12px; color:#666; margin-bottom:8px;">Applied on: ${app.date}</p>
+                    ${statusHtml}
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+    }
+</script>
+
+</body>
+</html>
